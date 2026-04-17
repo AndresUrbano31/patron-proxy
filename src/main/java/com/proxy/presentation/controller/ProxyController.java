@@ -1,6 +1,6 @@
 package com.proxy.presentation.controller;
 
-import com.proxy.application.service.HttpProxyService;
+import com.proxy.application.service.ProxyService;
 import com.proxy.domain.model.ProxyRequest;
 import com.proxy.presentation.dto.ErrorResponseDto;
 import com.proxy.presentation.dto.ProxyRequestDto;
@@ -21,15 +21,15 @@ import java.util.UUID;
 @RequestMapping("/api/proxy")
 public class ProxyController {
 
-    private final HttpProxyService proxyService;
+    private final ProxyService proxyService;
 
-    public ProxyController(HttpProxyService proxyService) {
+    public ProxyController(ProxyService proxyService) {
         this.proxyService = proxyService;
     }
 
     @GetMapping
     public ResponseEntity<String> getStatus() {
-        return ResponseEntity.ok("Proxy Service is running - " + LocalDateTime.now());
+        return ResponseEntity.ok("Proxy Service with PostgreSQL is running - " + LocalDateTime.now());
     }
 
     @PostMapping
@@ -46,8 +46,12 @@ public class ProxyController {
                     httpRequest.getHeader("User-Agent")
             );
 
-            String response = proxyService.proxyRequest(proxyRequest);
-            ProxyResponseDto responseDto = new ProxyResponseDto(response, 200, response.getBytes().length);
+            ProxyService.ProxyResponse response = proxyService.proxyRequest(proxyRequest);
+            ProxyResponseDto responseDto = new ProxyResponseDto(
+                    response.content(), 
+                    response.statusCode(), 
+                    response.responseSize()
+            );
 
             return ResponseEntity.ok(responseDto);
 
@@ -64,7 +68,7 @@ public class ProxyController {
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(errorDto);
 
         } catch (Exception e) {
-            ErrorResponseDto errorDto = new ErrorResponseDto("Internal server error", "INTERNAL_ERROR", 500);
+            ErrorResponseDto errorDto = new ErrorResponseDto("Internal server error: " + e.getMessage(), "INTERNAL_ERROR", 500);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorDto);
         }
     }
